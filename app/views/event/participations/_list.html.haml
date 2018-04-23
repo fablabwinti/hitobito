@@ -5,7 +5,19 @@
 
 - title @event.to_s
 
-- content_for(:filter, FilterNavigation::Event::Participations.new(self, @group, @event, params[:filter]).to_s)
+= content_for(:filter) do
+  = form_tag(nil, { method: :get, class: 'form-inline-search', role: 'search', remote: true, data: { spin: true } }) do
+    .control-group.has-feedback.has-clear
+      = label_tag(:q, t('global.button.search'), class: 'control-label')
+      = search_field_tag :q, params[:q], class: 'form-control', placeholder: t('global.button.search'), data: { submit: true }
+      %span.form-control-feedback{data: { clear: true }}
+        = icon(:remove)
+    = hidden_field_tag :returning, true
+    = hidden_field_tag :page, 1
+  .control-group
+    = FilterNavigation::Event::Participations.new(self, @group, @event, params[:filter], params[:q]).to_s
+
+- params[:q] = nil # Reset param so quicksearch filter does not get populated
 
 .pagination-bar
   = paginate entries

@@ -15,7 +15,16 @@ class Event::ParticipationsController < CrudController
                           answers_attributes: [:id, :question_id, :answer, answer: []],
                           application_attributes: [:id, :priority_2_id, :priority_3_id]]
 
+  class_attribute :load_entries_includes
+  self.load_entries_includes = [:roles, :event,
+                                answers: [:question],
+                                person: [:additional_emails, :phone_numbers,
+                                         :primary_group]
+                               ]
+
   self.remember_params += [:filter]
+
+  self.search_columns = [:id, 'people.first_name', 'people.last_name', 'people.nickname']
 
   self.sort_mappings = { last_name:  'people.last_name',
                          first_name: 'people.first_name',
@@ -105,13 +114,21 @@ class Event::ParticipationsController < CrudController
   end
 
   def list_entries
+    records = event.active_participations_without_affiliate_types.
+          includes(load_entries_includes).
+          uniq
     filter = Event::ParticipationFilter.new(event, current_user, params)
-    records = filter.list_entries.page(params[:page])
+    records = filter.list_entries(records).page(params[:page])
     @counts = filter.counts
-
-    records = records.reorder(sort_expression) if params[:sort] && sortable?(params[:sort])
-    Person::PreloadPublicAccounts.for(records.collect(&:person))
-    records
+    if params[:q]
+      # calling super here, so the searchable module on the listcontroller processes the query
+      # this means that here also the affiliate type roles will be displayed, which is counter intuitive
+      # i think ignoring other filters if you search is fine, but UI needs to show filter as inactive. see participations filter helper
+      # better yet, show a tab with search results.
+      super.includes(load_entries_includes).references(:people).page(params[:page]).per(50)
+    else
+      records.page(params[:page]).per(50)
+    end
   end
 
   def authorize_class
