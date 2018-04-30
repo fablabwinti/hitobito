@@ -11,10 +11,11 @@ class Event::ParticipationFilter
 
   attr_reader :event, :user, :params, :counts
 
-  def initialize(event, user, params = {})
+  def initialize(event, user, params = {}, search_results_count)
     @event = event
     @user = user
     @params = params
+    @search_results_count = search_results_count
   end
 
   def apply
@@ -38,9 +39,11 @@ class Event::ParticipationFilter
   end
 
   def populate_counts(records)
-    predefined_filters.each_with_object({}) do |name, memo|
+    counts = predefined_filters.each_with_object({}) do |name, memo|
       memo[name] = apply_filter_scope(records, name).count
     end
+    counts[:query] = @search_results_count if params[:q]
+    counts      
   end
 
   def load_entries

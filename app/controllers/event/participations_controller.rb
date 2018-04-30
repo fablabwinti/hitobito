@@ -117,18 +117,14 @@ class Event::ParticipationsController < CrudController
     records = event.active_participations_without_affiliate_types.
           includes(load_entries_includes).
           uniq
-    filter = Event::ParticipationFilter.new(event, current_user, params)
+    # calling super here, so the searchable module on the listcontroller processes the query
+    # this means that here also the affiliate type roles will be displayed, which is counter intuitive
+    search_results = super.includes(load_entries_includes).references(:people) if params[:q]
+    search_results_count = search_results ? search_results.count : 0
+    filter = Event::ParticipationFilter.new(event, current_user, params, search_results_count)
     records = filter.list_entries(records).page(params[:page])
     @counts = filter.counts
-    if params[:q]
-      # calling super here, so the searchable module on the listcontroller processes the query
-      # this means that here also the affiliate type roles will be displayed, which is counter intuitive
-      # i think ignoring other filters if you search is fine, but UI needs to show filter as inactive. see participations filter helper
-      # better yet, show a tab with search results.
-      super.includes(load_entries_includes).references(:people).page(params[:page]).per(50)
-    else
-      records.page(params[:page]).per(50)
-    end
+    params[:q] ? search_results.page(params[:page]).per(50) : records.page(params[:page]).per(50)
   end
 
   def authorize_class

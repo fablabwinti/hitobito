@@ -27,8 +27,8 @@ module FilterNavigation
       private
 
       def init_labels
-        if @query
-          true
+        if @query && !@query.blank?
+          @active_label = @query
         elsif role_labels.include?(filter)
           dropdown.label = filter
           dropdown.active = true
@@ -40,7 +40,7 @@ module FilterNavigation
       end
 
       def init_items
-        item(@query,'','') unless @query.blank?
+        item(@query, '', counts[:query]) unless @query.blank?
         predefined_filters.each do |key|
           item(predefined_filter_label(key), event_participation_filter_link(key), counts[key])
         end
