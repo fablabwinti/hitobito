@@ -9,6 +9,8 @@ require 'spec_helper'
 
 describe SubscriptionsController do
 
+  include AsyncDownload
+
   before { sign_in(user) }
 
   let(:user)  { people(:top_leader) }
@@ -37,15 +39,23 @@ describe SubscriptionsController do
     it 'renders csv in backround job' do
       expect do
         get :index, group_id: group.id, mailing_list_id: mailing_list.id, format: :csv
-        expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung an \S+@\S+ versendet./)
+        expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung heruntergeladen./)
       end.to change(Delayed::Job, :count).by(1)
     end
 
     it 'renders xlsx in backround job' do
       expect do
         get :index, group_id: group.id, mailing_list_id: mailing_list.id, format: :xlsx
-        expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung an \S+@\S+ versendet./)
+        expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung heruntergeladen./)
       end.to change(Delayed::Job, :count).by(1)
+    end
+
+    it 'sets cookie on export' do
+      get :index, group_id: group.id, mailing_list_id: mailing_list.id, format: :csv
+      expect(async_downloads_cookie[0]['name'])
+        .to match(/^(subscriptions)+\S*(#{people(:top_leader).id})+$/)
+
+      expect(async_downloads_cookie[0]['type']).to match(/^csv$/)
     end
 
     it 'exports vcf files' do

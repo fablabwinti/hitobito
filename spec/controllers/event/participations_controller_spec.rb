@@ -9,6 +9,8 @@ require 'spec_helper'
 
 describe Event::ParticipationsController do
 
+  include AsyncDownload
+
   let(:group) { groups(:top_layer) }
 
   let(:other_course) do
@@ -89,15 +91,21 @@ describe Event::ParticipationsController do
     it 'exports csv files' do
       expect do
         get :index, group_id: group, event_id: course.id, format: :csv
-        expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung an \S+@\S+ versendet./)
+        expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung heruntergeladen./)
       end.to change(Delayed::Job, :count).by(1)
     end
 
     it 'exports xlsx files' do
       expect do
         get :index, group_id: group, event_id: course.id, format: :xlsx
-        expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung an \S+@\S+ versendet./)
+        expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung heruntergeladen./)
       end.to change(Delayed::Job, :count).by(1)
+    end
+
+    it 'sets cookie on export' do
+      get :index, group_id: group, event_id: course.id, format: :csv
+      expect(async_downloads_cookie[0]['name']).to match(/^(event_participation_export)+\S*(#{people(:top_leader).id})+$/)
+      expect(async_downloads_cookie[0]['type']).to match(/^csv$/)
     end
 
     it 'renders email addresses with additional ones' do

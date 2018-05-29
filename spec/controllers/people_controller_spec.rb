@@ -9,6 +9,8 @@ require 'spec_helper'
 
 describe PeopleController do
 
+  include AsyncDownload
+
   before do
     PeopleRelation.kind_opposites['parent'] = 'child'
     PeopleRelation.kind_opposites['child'] = 'parent'
@@ -130,23 +132,21 @@ describe PeopleController do
           it 'exports csv' do
             expect do
               get :index, group_id: group, format: :csv
-              expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung an \S+@\S+ versendet./)
+              expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung heruntergeladen./)
             end.to change(Delayed::Job, :count).by(1)
           end
 
           it 'exports xlsx' do
             expect do
               get :index, group_id: group, format: :xlsx
-              expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung an \S+@\S+ versendet./)
+              expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung heruntergeladen./)
             end.to change(Delayed::Job, :count).by(1)
           end
 
-          it 'does not export if no mail is given' do
-            expect_any_instance_of(Person).to receive(:email).at_least(1).times.and_return(nil)
-            expect do
-              get :index, group_id: group, format: :csv
-              expect(flash[:alert]).to match(/wird eine Email Adresse benötigt/)
-            end.to change(Delayed::Job, :count).by(0)
+          it 'sets cookie on export' do
+            get :index, group_id: group, format: :csv
+            expect(async_downloads_cookie[0]['name']).to match(/^(people_export)+\S*(#{top_leader.id})+$/)
+            expect(async_downloads_cookie[0]['type']).to match(/^csv$/)
           end
         end
 

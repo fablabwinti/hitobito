@@ -9,6 +9,8 @@ require 'spec_helper'
 
 describe EventsController, type: :controller do
 
+  include AsyncDownload
+
   render_views
 
   # always use fixtures with crud controller examples, otherwise request reuse might produce errors
@@ -94,17 +96,22 @@ describe EventsController, type: :controller do
       it 'renders events csv' do
         expect do
           get :index, group_id: group.id, format: :csv, year: 2012
-          expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung an \S+@\S+ versendet./)
+          expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung heruntergeladen./)
         end.to change(Delayed::Job, :count).by(1)
       end
 
       it 'renders courses csv' do
         expect do
           get :index, group_id: group.id, format: :csv, year: 2012, type: Event::Course.sti_name
-          expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung an \S+@\S+ versendet./)
+          expect(flash[:notice]).to match(/Export wird im Hintergrund gestartet und nach Fertigstellung heruntergeladen./)
         end.to change(Delayed::Job, :count).by(1)
       end
 
+      it 'sets cookie on export' do
+        get :index, group_id: group.id, format: :csv, year: 2012
+        expect(async_downloads_cookie[0]['name']).to match(/^(events_export)+\S*(#{people(:top_leader).id})+$/)
+        expect(async_downloads_cookie[0]['type']).to match(/^csv$/)
+      end
     end
 
     context '.ics' do

@@ -8,6 +8,7 @@
 class Event::ParticipationsController < CrudController
 
   include Concerns::RenderPeopleExports
+  include AsyncDownload
 
   self.nesting = Group, Event
 
@@ -119,8 +120,16 @@ class Event::ParticipationsController < CrudController
   end
 
   def render_tabular_in_background(format)
-    Export::EventParticipationsExportJob.new(format, current_person.id, event.id, params).enqueue!
-    flash[:notice] = translate(:export_enqueued, email: current_person.email)
+    filename = download_filename('event_participation_export', current_person.id)
+    set_download_cookies(filename, format)
+
+    Export::EventParticipationsExportJob.new(format,
+                                             event.id,
+                                             current_person.id,
+                                             params,
+                                             filename).enqueue!
+
+    flash[:notice] = translate(:export_enqueued)
   end
 
   def check_preconditions

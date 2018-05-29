@@ -7,6 +7,7 @@
 
 class EventsController < CrudController
   include YearBasedPaging
+  include AsyncDownload
 
   self.nesting = Group
 
@@ -143,8 +144,10 @@ class EventsController < CrudController
   end
 
   def render_tabular_in_background(format)
-    Export::EventsExportJob.new(format, current_person.id, params[:type], year, parent).enqueue!
-    flash[:notice] = translate(:export_enqueued, email: current_person.email)
+    filename = download_filename('events_export', current_person.id)
+    set_download_cookies(filename, format)
+    Export::EventsExportJob.new(format, params[:type], year, parent, filename).enqueue!
+    flash[:notice] = translate(:export_enqueued)
   end
 
   def render_ical(entries)

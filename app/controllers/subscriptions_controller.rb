@@ -8,6 +8,7 @@
 class SubscriptionsController < CrudController
 
   include Concerns::RenderPeopleExports
+  include AsyncDownload
 
   self.nesting = Group, MailingList
 
@@ -51,11 +52,13 @@ class SubscriptionsController < CrudController
   end
 
   def render_tabular_in_background(format)
+    filename = download_filename("subscriptions_#{mailing_list.id}", current_person.id)
+    set_download_cookies(filename, format)
     Export::SubscriptionsJob.new(format,
                                  mailing_list.id,
-                                 current_person.id,
-                                 params[:household]).enqueue!
-    flash[:notice] = translate(:export_enqueued, email: current_person.email)
+                                 params[:household],
+                                 filename).enqueue!
+    flash[:notice] = translate(:export_enqueued)
   end
 
   def render_tabular(format, people)

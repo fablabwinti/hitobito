@@ -226,6 +226,9 @@ Hitobito::Application.routes.draw do
 
     get 'changelog' => 'changelog#index'
 
+    get 'downloads/:id' => 'downloads#show'
+    get 'downloads/:id/exists' => 'downloads#exists?'
+
   end # scope locale
 
   # The priority is based upon order of creation:
